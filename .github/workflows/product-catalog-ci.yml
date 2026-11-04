@@ -1,0 +1,43 @@
+name: Product Catalog CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, test, and validate Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21 and cache Maven dependencies
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: services/product-catalog-service/pom.xml
+
+      - name: Compile application
+        run: mvn -B -f services/product-catalog-service/pom.xml compile
+
+      - name: Run unit tests
+        run: mvn -B -f services/product-catalog-service/pom.xml test
+
+      - name: Package Spring Boot application
+        run: mvn -B -f services/product-catalog-service/pom.xml package -DskipTests
+
+      - name: Build Docker image
+        run: docker build --tag product-catalog-service:ci services/product-catalog-service
+
+      - name: Validate Docker image
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' product-catalog-service:ci)" = "app"
+          docker run --rm --entrypoint java product-catalog-service:ci -version

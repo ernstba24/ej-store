@@ -71,6 +71,30 @@ mvn test
 
 The `test` profile uses an in-memory H2 database and does not require Docker.
 
+## GitHub Actions
+
+The `Product Catalog CI` workflow runs on pull requests targeting `main` and
+pushes to `main`. It checks out the repository, sets up Java 21 with Maven
+dependency caching, compiles the service, runs tests, packages the application,
+builds the Docker image, and validates that the image runs as the non-root
+`app` user with a working Java runtime.
+
+The separate `Publish Product Catalog to GHCR` workflow runs only on pushes to
+`main`. It authenticates to GitHub Container Registry using the automatically
+provided `GITHUB_TOKEN`, then builds and publishes the image as
+`ghcr.io/<owner>/<repository>` with a commit-SHA tag and `latest`. No personal
+access token or additional secret is needed.
+
+In the repository's **Settings → Actions → General**, allow GitHub Actions to
+create and approve pull requests only if your project needs it; this workflow
+does not require that permission. The workflow declares `contents: read` for
+CI and `contents: read` plus `packages: write` for publishing. Ensure Actions
+are enabled and the repository's workflow permissions allow the workflow-level
+`packages: write` grant. The `main`-only push trigger is the approved publishing
+branch policy; protect `main` with branch protection rules or a ruleset to
+control what can be merged and published. Image visibility can be adjusted
+under the package's settings after its first successful publication.
+
 ## Local endpoints
 
 - Health: <http://localhost:8080/actuator/health>
