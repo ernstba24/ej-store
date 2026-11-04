@@ -79,8 +79,11 @@ dependency caching, compiles the service, runs tests, packages the application,
 builds the Docker image, and validates that the image runs as the non-root
 `app` user with a working Java runtime.
 
-The separate `Publish Product Catalog to GHCR` workflow runs only on pushes to
-`main`. It authenticates to GitHub Container Registry using the automatically
+The separate `Publish Product Catalog to GHCR` workflow is run manually
+(**Actions → Publish Product Catalog to GHCR → Run workflow**) and only from
+`main`. It first runs the CI workflow and publishes only if CI passes. It sets
+up Docker Buildx (required for the GitHub Actions build cache), then
+authenticates to GitHub Container Registry using the automatically
 provided `GITHUB_TOKEN`, then builds and publishes the image as
 `ghcr.io/<owner>/<repository>` with a commit-SHA tag and `latest`. No personal
 access token or additional secret is needed.
