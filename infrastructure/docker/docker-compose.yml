@@ -1,0 +1,40 @@
+services:
+  product-catalog-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Set DB_NAME in infrastructure/docker/.env}
+      POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME in infrastructure/docker/.env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in infrastructure/docker/.env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - product-catalog-postgres-data:/var/lib/postgresql/data
+    networks:
+      - catalog-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  product-catalog-service:
+    build:
+      context: ../../services/product-catalog-service
+    depends_on:
+      product-catalog-db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://product-catalog-db:5432/${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    networks:
+      - catalog-net
+
+networks:
+  catalog-net:
+
+volumes:
+  product-catalog-postgres-data:
