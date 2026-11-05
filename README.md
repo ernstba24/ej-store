@@ -71,6 +71,56 @@ mvn test
 
 The `test` profile uses an in-memory H2 database and does not require Docker.
 
+## Run Keycloak locally
+
+Keycloak is the Phase 2 identity provider. It runs in development mode in its
+own container and connects to a dedicated PostgreSQL container. The Keycloak
+database has a separate named volume and a private Compose network; it is not
+shared with the Product Catalog database. Keycloak is available at
+<http://localhost:8081>, leaving the catalog service on port 8080.
+
+The Compose file reads both services' settings from
+`infrastructure/docker/.env`. The `.env` file is ignored by Git. Add the
+Keycloak variables shown in `.env.example` to your existing local `.env` and
+replace the password and admin placeholders with local-only values. Do not
+overwrite an existing `.env` because it may contain your Product Catalog
+database settings.
+
+From the repository root, start Keycloak and its database:
+
+```bash
+cd infrastructure/docker
+docker compose up -d keycloak
+```
+
+Compose starts `keycloak-db` first and waits for its PostgreSQL health check.
+Keycloak then connects to the `keycloak-db` hostname on the private
+`keycloak-net` network, using the database name and credentials from `.env`.
+The database port is not published to the host. Keycloak's data persists in
+the `keycloak-postgres-data` volume across container restarts.
+
+Check container health and logs:
+
+```bash
+docker compose ps
+docker compose logs -f keycloak keycloak-db
+```
+
+When both containers report healthy, open <http://localhost:8081/admin> and
+sign in with `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD` from your
+local `.env`. The readiness health check is enabled inside the Keycloak
+container. This setup only starts Keycloak; it does not create an application
+realm, clients, roles, or users.
+
+Stop just the identity provider and its database while preserving stored data:
+
+```bash
+docker compose stop keycloak keycloak-db
+```
+
+Do not use `docker compose down -v` unless you intend to delete the persistent
+database volumes.
+
 ## GitHub Actions
 
 The `Product Catalog CI` workflow runs on pull requests targeting `main` and
